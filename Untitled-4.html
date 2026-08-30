@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Goal & Quest Tracker</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px 20px 20px;
+      overflow-x: hidden;
+    }
+
+    /* Confetti Canvas Overlay */
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    /* Stats Dashboard Header */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .stat-pill.streak { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
+    .stat-pill.achieved { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+
+    .quote-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-left: 4px solid var(--accent);
+      padding: 18px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 25px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      color: #e2e8f0;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select, textarea {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .goal-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .goal-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .badge-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .badge-completed {
+      background: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-learn { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-improve { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-save { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-fitness { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+    .badge-project { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-career { background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+
+    .delete-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      box-shadow: none;
+    }
+
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .progress-wrapper {
+      margin: 18px 0;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .progress-container {
+      width: 100%;
+      height: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+      border-radius: 20px;
+      transition: width 0.4s ease;
+    }
+
+    .milestone-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .milestone-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .milestone-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+    }
+
+    .milestone-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--success);
+      cursor: pointer;
+    }
+
+    .milestone-text {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .milestone-item.completed .milestone-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .edit-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      box-shadow: none;
+    }
+
+    .edit-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .add-milestone-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px dashed var(--card-border);
+      color: var(--text-muted);
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      box-shadow: none;
+      width: 100%;
+    }
+
+    .add-milestone-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    /* --- Footer & Feedback Box --- */
+    .feedback-card {
+      margin-top: 40px;
+      border-top: 2px solid var(--card-border);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 25px;
+      padding-bottom: 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    footer span {
+      color: var(--accent);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="container">
+    <header>
+      <h1>Goal & Quest Tracker</h1>
+      
+      <div class="stats-bar">
+        <div class="stat-pill streak">
+          <span>🔥</span> <span id="streak-count">0</span> Day Streak
+        </div>
+        <div class="stat-pill achieved">
+          <span>🏆</span> <span id="achieved-count">0</span> Goals Achieved
+        </div>
+      </div>
+
+      <div class="quote-card">
+        <p id="daily-quote">"Loading daily motivation..."</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <h2>✨ Create New Objective</h2>
+      <form id="goal-form">
+        <div class="form-group">
+          <label for="goal-title">Goal Title</label>
+          <input type="text" id="goal-title" placeholder="e.g., Learn Spanish or Save for Laptop" required>
+        </div>
+
+        <div class="form-group">
+          <label for="goal-category">Goal Purpose</label>
+          <select id="goal-category" required>
+            <option value="Learn">📚 Learn & Study (Skill / Knowledge)</option>
+            <option value="Improve">🎯 Improve Skill / Habit (Consistency)</option>
+            <option value="Save For">💰 Save Money (Budget / Purchase)</option>
+            <option value="Health">🏋️ Health & Fitness (Physical Goals)</option>
+            <option value="Project">🕹️ Project / Hobby (Build or Create)</option>
+            <option value="Career">🚀 Personal Career (Professional Growth)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="goal-milestones">Initial Milestones (Optional)</label>
+          <input type="text" id="goal-milestones" placeholder="e.g. Phase 1, Phase 2 (or leave blank to add later)">
+        </div>
+
+        <button type="submit">Initialize Goal</button>
+      </form>
+    </div>
+
+    <section id="goals-list"></section>
+
+    <div class="card feedback-card">
+      <h2>💬 Send Feedback & Suggestions</h2>
+      <form id="feedback-form" action="https://formspree.io/f/xyzaebqw" method="POST">
+        <div class="form-group">
+          <label for="user-email">Your Email (Optional)</label>
+          <input type="email" id="user-email" name="email" placeholder="name@example.com">
+        </div>
+        <div class="form-group">
+          <label for="feedback-message">Ideas / Improvements</label>
+          <textarea id="feedback-message" name="message" placeholder="How can we make this website better?" required></textarea>
+        </div>
+        <button type="submit">Send Feedback</button>
+      </form>
+    </div>
+
+    <footer>
+      Made by <span>toxicrabah</span>
+    </footer>
+  </div>
+
+  <script>
+    // --- Confetti Cannon Engine ---
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    let confettiParticles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function triggerConfetti() {
+      const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#a855f7'];
+      for (let i = 0; i < 100; i++) {
+        confettiParticles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height * 0.3 - canvas.height * 0.3,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 6,
+          vy: Math.random() * 4 + 3,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 10
+        });
+      }
+    }
+
+    function animateConfetti() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiParticles.forEach((p, index) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotationSpeed;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        ctx.restore();
+
+        if (p.y > canvas.height) {
+          confettiParticles.splice(index, 1);
+        }
+      });
+      requestAnimationFrame(animateConfetti);
+    }
+    animateConfetti();
+
+    // --- Daily Quotes ---
+    const quotes = [
+      "Small daily improvements over time lead to stunning results.",
+      "Action is the foundational key to all success.",
+      "Don't count the days, make the days count.",
+      "The secret of getting ahead is getting started.",
+      "You don't have to be great to start, but you have to start to be great.",
+      "It always seems impossible until it's done.",
+      "Focus on progress, not perfection."
+    ];
+
+    function setDailyQuote() {
+      const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+      const quoteIndex = dayOfYear % quotes.length;
+      document.getElementById('daily-quote').innerText = `"${quotes[quoteIndex]}"`;
+    }
+
+    // --- Streak Tracker ---
+    function checkStreak() {
+      const today = new Date().toDateString();
+      const lastLogin = localStorage.getItem('apexLastLogin');
+      let currentStreak = parseInt(localStorage.getItem('apexStreak')) || 0;
+
+      if (!lastLogin) {
+        currentStreak = 1;
+      } else {
+        const lastDate = new Date(lastLogin);
+        const currentDate = new Date(today);
+        const diffDays = Math.round((currentDate - lastDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+          currentStreak += 1;
+        } else if (diffDays > 1) {
+          currentStreak = 1;
+        }
+      }
+
+      localStorage.setItem('apexLastLogin', today);
+      localStorage.setItem('apexStreak', currentStreak);
+      document.getElementById('streak-count').innerText = currentStreak;
+    }
+
+    // --- Goal Data ---
+    let goals = JSON.parse(localStorage.getItem('apexGoals')) || [];
+
+    function saveGoals() {
+      localStorage.setItem('apexGoals', JSON.stringify(goals));
+      renderGoals();
+    }
+
+    function getCategoryBadgeClass(category) {
+      switch(category) {
+        case 'Learn': return 'badge-learn';
+        case 'Improve': return 'badge-improve';
+        case 'Save For': return 'badge-save';
+        case 'Health': return 'badge-fitness';
+        case 'Project': return 'badge-project';
+        case 'Career': return 'badge-career';
+        default: return 'badge-learn';
+      }
+    }
+
+    document.getElementById('goal-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('goal-title').value.trim();
+      const category = document.getElementById('goal-category').value;
+      const rawMilestones = document.getElementById('goal-milestones').value.trim();
+
+      let milestones = [];
+      if (rawMilestones.length > 0) {
+        milestones = rawMilestones.split(',')
+          .map(item => item.trim())
+          .filter(item => item.length > 0)
+          .map(t => ({ title: t, completed: false }));
+      } else {
+        milestones = [{ title: "Complete initial setup", completed: false }];
+      }
+
+      const newGoal = {
+        id: Date.now(),
+        title,
+        category,
+        milestones
+      };
+
+      goals.push(newGoal);
+      saveGoals();
+
+      document.getElementById('goal-title').value = '';
+      document.getElementById('goal-milestones').value = '';
+    });
+
+    function deleteGoal(id) {
+      if (confirm("Delete this goal?")) {
+        goals = goals.filter(g => g.id !== id);
+        saveGoals();
+      }
+    }
+
+    function toggleMilestone(goalId, index) {
+      const goal = goals.find(g => g.id === goalId);
+      if (goal) {
+        const wasCompletedBefore = goal.milestones.length > 0 && goal.milestones.every(m => m.completed);
+        
+        goal.milestones[index].completed = !goal.milestones[index].completed;
+        
+        const isNowCompleted = goal.milestones.length > 0 && goal.milestones.every(m => m.completed);
+
+        if (!wasCompletedBefore && isNowCompleted) {
+          triggerConfetti();
+        }
+
+        saveGoals();
+      }
+    }
+
+    function editMilestone(goalId, index) {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      const newText = prompt("Edit milestone text:", goal.milestones[index].title);
+      if (newText !== null && newText.trim() !== "") {
+        goal.milestones[index].title = newText.trim();
+        saveGoals();
+      }
+    }
+
+    function addMilestone(goalId) {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      const title = prompt("Enter new milestone step:");
+      if (title !== null && title.trim() !== "") {
+        goal.milestones.push({ title: title.trim(), completed: false });
+        saveGoals();
+      }
+    }
+
+    function renderGoals() {
+      const container = document.getElementById('goals-list');
+      container.innerHTML = '';
+
+      let achievedGoalsCount = 0;
+
+      if (goals.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align: center; color: var(--text-muted);">
+            <p>No active goals found. Enter a title above to get started!</p>
+          </div>`;
+        document.getElementById('achieved-count').innerText = 0;
+        return;
+      }
+
+      goals.forEach(goal => {
+        const completedCount = goal.milestones.filter(m => m.completed).length;
+        const progressPercent = goal.milestones.length > 0 
+          ? Math.round((completedCount / goal.milestones.length) * 100) 
+          : 0;
+
+        const isFullyAchieved = goal.milestones.length > 0 && completedCount === goal.milestones.length;
+        if (isFullyAchieved) {
+          achievedGoalsCount++;
+        }
+
+        const badgeClass = getCategoryBadgeClass(goal.category);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <div class="goal-header">
+            <div class="goal-title-group">
+              <div class="badge-container">
+                <span class="badge ${badgeClass}">${goal.category}</span>
+                ${isFullyAchieved ? '<span class="badge badge-completed">COMPLETED 🎉</span>' : ''}
+              </div>
+              <h3 class="goal-title">${goal.title}</h3>
+            </div>
+            <button class="delete-btn" onclick="deleteGoal(${goal.id})">Delete</button>
+          </div>
+
+          <div class="progress-wrapper">
+            <div class="progress-meta">
+              <span>Progress Status</span>
+              <span><strong>${progressPercent}%</strong> (${completedCount}/${goal.milestones.length} Done)</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar" style="width: ${progressPercent}%;"></div>
+            </div>
+          </div>
+
+          <ul class="milestone-list">
+            ${goal.milestones.map((m, index) => `
+              <li class="milestone-item ${m.completed ? 'completed' : ''}">
+                <div class="milestone-left">
+                  <input type="checkbox" id="m-${goal.id}-${index}" ${m.completed ? 'checked' : ''} 
+                         onchange="toggleMilestone(${goal.id}, ${index})">
+                  <label class="milestone-text" for="m-${goal.id}-${index}">${m.title}</label>
+                </div>
+                <button class="edit-btn" onclick="editMilestone(${goal.id}, ${index})">✏️ Edit</button>
+              </li>
+            `).join('')}
+          </ul>
+          
+          <button class="add-milestone-btn" onclick="addMilestone(${goal.id})">+ Add Milestone Step</button>
+        `;
+
+        container.appendChild(card);
+      });
+
+      document.getElementById('achieved-count').innerText = achievedGoalsCount;
+    }
+
+    setDailyQuote();
+    checkStreak();
+    renderGoals();
+  </script>
+</body>
+</html>
